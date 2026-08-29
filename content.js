@@ -293,15 +293,17 @@
       })
       .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
     const target = directTrigger || named || menuPopup || iconOnly || svgControls[0] || sidebarControls[0];
-    if (!target) {
+    const cleanup = () => {
       forcedScopes.forEach((el) => el.classList.remove('dbbd-force-hover'));
       forcedDisplays.forEach(({ el, display }) => display ? el.style.display = display : el.style.removeProperty('display'));
+    };
+    if (!target) {
+      cleanup();
       throw new Error('找不到该会话的“更多”按钮');
     }
     target.click();
     await sleep(350);
-    forcedScopes.forEach((el) => el.classList.remove('dbbd-force-hover'));
-    forcedDisplays.forEach(({ el, display }) => display ? el.style.display = display : el.style.removeProperty('display'));
+    return cleanup;
   }
 
   function closeOpenOverlay() {
@@ -310,16 +312,18 @@
   }
 
   async function deleteOne(row) {
-    await openRowMenu(row);
+    const cleanupMenuTrigger = await openRowMenu(row);
     const deleteMatches = await waitForMatchingVisible(TEXT.delete, () => document, 3000);
     const deleteItem = deleteMatches.find((el) =>
       !el.closest('#dbbd-panel') && !el.closest('.dbbd-row')
     );
     if (!deleteItem) {
+      cleanupMenuTrigger();
       closeOpenOverlay();
       throw new Error('菜单中找不到“删除”');
     }
     clickable(deleteItem).click();
+    cleanupMenuTrigger();
     await sleep(250);
     const getDialogScope = () => {
       const dialogs = [...document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="dialog"], [data-slot="alert-dialog-content"]')].filter(visible);
