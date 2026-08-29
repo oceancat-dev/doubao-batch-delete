@@ -196,6 +196,15 @@
 
   async function openRowMenu(row) {
     row.scrollIntoView({ block: 'center' });
+    const forcedScopes = [];
+    let hoverScope = row;
+    const root = sidebar();
+    for (let depth = 0; hoverScope && depth < 4; depth += 1) {
+      hoverScope.classList.add('dbbd-force-hover');
+      forcedScopes.push(hoverScope);
+      if (hoverScope === root) break;
+      hoverScope = hoverScope.parentElement;
+    }
     const box = row.getBoundingClientRect();
     const eventOptions = { bubbles: true, clientX: box.right - 12, clientY: box.top + box.height / 2 };
     row.dispatchEvent(new PointerEvent('pointerenter', { ...eventOptions, bubbles: false }));
@@ -203,7 +212,7 @@
     row.dispatchEvent(new MouseEvent('mouseenter', { ...eventOptions, bubbles: false }));
     row.dispatchEvent(new MouseEvent('mouseover', eventOptions));
     row.dispatchEvent(new MouseEvent('mousemove', eventOptions));
-    await sleep(300);
+    await sleep(350);
 
     // 只允许真正的交互控件成为菜单按钮。旧版本包含通用 [title]，
     // 会误选扩展自己插入的复选框。
@@ -259,9 +268,13 @@
       })
       .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
     const target = named || menuPopup || iconOnly || svgControls[0] || sidebarControls[0];
-    if (!target) throw new Error('找不到该会话的“更多”按钮');
+    if (!target) {
+      forcedScopes.forEach((el) => el.classList.remove('dbbd-force-hover'));
+      throw new Error('找不到该会话的“更多”按钮');
+    }
     target.click();
     await sleep(350);
+    forcedScopes.forEach((el) => el.classList.remove('dbbd-force-hover'));
   }
 
   function closeOpenOverlay() {

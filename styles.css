@@ -18,6 +18,8 @@ body:has(#dbbd-panel:not(.collapsed)) .dbbd-row > .dbbd-check { display:flex; }
 .dbbd-check span { width:15px; height:15px; border:1.5px solid #aaa; border-radius:4px; background:#fff; box-sizing:border-box; }
 .dbbd-check input:checked + span { background:#4f6ef7; border-color:#4f6ef7; box-shadow:inset 0 0 0 3px #fff; }
 .dbbd-selected { background:rgba(79,110,247,.10) !important; }
+.dbbd-force-hover [class*="opacity-0"],
+.dbbd-force-hover[class*="opacity-0"] { opacity:1 !important; visibility:visible !important; pointer-events:auto !important; }
 #dbbd-toast { position:fixed; left:50%; top:30px; z-index:2147483647; transform:translate(-50%,-12px); opacity:0; pointer-events:none; padding:10px 16px; border-radius:9px; color:#fff; background:#333; font:14px system-ui,sans-serif; transition:.2s ease; }
 #dbbd-toast.show { opacity:1; transform:translate(-50%,0); }
 #dbbd-toast[data-type="success"] { background:#248a52; } #dbbd-toast[data-type="warn"] { background:#b06b16; }
