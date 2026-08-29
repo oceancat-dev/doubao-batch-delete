@@ -301,8 +301,27 @@
       cleanup();
       throw new Error('找不到该会话的“更多”按钮');
     }
-    target.click();
+    const pointerOptions = {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      button: 0,
+      buttons: 1,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+    };
+    target.dispatchEvent(new PointerEvent('pointerdown', pointerOptions));
+    target.dispatchEvent(new MouseEvent('mousedown', { ...pointerOptions, detail: 1 }));
+    await sleep(80);
+    target.dispatchEvent(new PointerEvent('pointerup', { ...pointerOptions, buttons: 0 }));
+    target.dispatchEvent(new MouseEvent('mouseup', { ...pointerOptions, buttons: 0, detail: 1 }));
     await sleep(350);
+    const menuOpened = target.getAttribute('aria-expanded') === 'true' || target.getAttribute('data-state') === 'open';
+    if (target.hasAttribute('aria-haspopup') && !menuOpened) {
+      cleanup();
+      throw new Error('已找到“更多”按钮，但菜单未打开');
+    }
     return cleanup;
   }
 
