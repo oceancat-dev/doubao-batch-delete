@@ -197,6 +197,7 @@
   async function openRowMenu(row) {
     row.scrollIntoView({ block: 'center' });
     const forcedScopes = [];
+    const forcedDisplays = [];
     let hoverScope = row;
     const root = sidebar();
     for (let depth = 0; hoverScope && depth < 4; depth += 1) {
@@ -204,6 +205,20 @@
       forcedScopes.push(hoverScope);
       if (hoverScope === root) break;
       hoverScope = hoverScope.parentElement;
+    }
+
+    // 当前豆包 DOM：菜单触发器位于 `hidden group-hover/...:block` 容器中。
+    // 合成 hover 不会激活 Tailwind 的 group-hover，因此直接临时显示其隐藏祖先。
+    const directTrigger = row.querySelector('button[aria-haspopup="menu"][data-slot="dropdown-menu-trigger"]');
+    if (directTrigger) {
+      let ancestor = directTrigger.parentElement;
+      while (ancestor && ancestor !== row) {
+        if (ancestor.classList.contains('hidden')) {
+          forcedDisplays.push({ el: ancestor, display: ancestor.style.display });
+          ancestor.style.setProperty('display', 'block', 'important');
+        }
+        ancestor = ancestor.parentElement;
+      }
     }
     const box = row.getBoundingClientRect();
     const eventOptions = { bubbles: true, clientX: box.right - 12, clientY: box.top + box.height / 2 };
@@ -267,14 +282,16 @@
           && rect.height <= 56;
       })
       .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
-    const target = named || menuPopup || iconOnly || svgControls[0] || sidebarControls[0];
+    const target = directTrigger || named || menuPopup || iconOnly || svgControls[0] || sidebarControls[0];
     if (!target) {
       forcedScopes.forEach((el) => el.classList.remove('dbbd-force-hover'));
+      forcedDisplays.forEach(({ el, display }) => display ? el.style.display = display : el.style.removeProperty('display'));
       throw new Error('找不到该会话的“更多”按钮');
     }
     target.click();
     await sleep(350);
     forcedScopes.forEach((el) => el.classList.remove('dbbd-force-hover'));
+    forcedDisplays.forEach(({ el, display }) => display ? el.style.display = display : el.style.removeProperty('display'));
   }
 
   function closeOpenOverlay() {
