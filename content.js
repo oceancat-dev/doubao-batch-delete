@@ -189,9 +189,19 @@
   }
 
   function matchingVisible(regex, scope = document) {
-    return [...scope.querySelectorAll('button,[role="button"],[role="menuitem"],li,div,span')]
+    return [...scope.querySelectorAll('button,[role="button"],[role="menuitem"],[data-slot*="menu-item"],li,div,span,p')]
       .filter((el) => visible(el) && regex.test(normalizedText(el)))
       .sort((a, b) => a.children.length - b.children.length || a.getBoundingClientRect().width - b.getBoundingClientRect().width);
+  }
+
+  async function waitForMatchingVisible(regex, scopeProvider = () => document, timeoutMs = 2500) {
+    const deadline = Date.now() + timeoutMs;
+    do {
+      const matches = matchingVisible(regex, scopeProvider());
+      if (matches.length) return matches;
+      await sleep(100);
+    } while (Date.now() < deadline);
+    return [];
   }
 
   async function openRowMenu(row) {
@@ -301,7 +311,8 @@
 
   async function deleteOne(row) {
     await openRowMenu(row);
-    const deleteItem = matchingVisible(TEXT.delete).find((el) =>
+    const deleteMatches = await waitForMatchingVisible(TEXT.delete, () => document, 3000);
+    const deleteItem = deleteMatches.find((el) =>
       !el.closest('#dbbd-panel') && !el.closest('.dbbd-row')
     );
     if (!deleteItem) {
@@ -309,9 +320,13 @@
       throw new Error('菜单中找不到“删除”');
     }
     clickable(deleteItem).click();
-    await sleep(300);
-    const dialogs = [...document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="dialog"]')].filter(visible);
-    const scope = dialogs.at(-1) || document;
+    await sleep(250);
+    const getDialogScope = () => {
+      const dialogs = [...document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="dialog"], [data-slot="alert-dialog-content"]')].filter(visible);
+      return dialogs.at(-1) || document;
+    };
+    await waitForMatchingVisible(TEXT.confirmDelete, getDialogScope, 3000);
+    const scope = getDialogScope();
     const confirmButtons = [...scope.querySelectorAll('button,[role="button"]')]
       .filter((el) => visible(el) && TEXT.confirmDelete.test(normalizedText(el)) && !el.closest('#dbbd-panel'));
     const confirm = confirmButtons.find((el) =>

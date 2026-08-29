@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "豆包聊天记录批量删除",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "在豆包网页版中批量选择并删除聊天记录。",
   "homepage_url": "https://github.com/youyang13811808-code/doubao-batch-delete",
   "permissions": ["storage"],
