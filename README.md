@@ -102,3 +102,8 @@
 
 - 兼容 Radix `role="alertdialog"` 删除确认弹窗
 - 精确识别 `alert-dialog-action`，并支持“删除对话”等按钮文案
+
+### v1.0.12
+
+- 移除会误匹配 Tailwind 类名的 `[class*="dialog"]` 宽泛选择器
+- 仅使用真实 `role` 和 `data-slot` 节点确定确认弹窗作用域

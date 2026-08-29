@@ -348,10 +348,8 @@
       const dialogs = [...document.querySelectorAll([
         '[role="alertdialog"]',
         '[role="dialog"]',
-        '[class*="modal"]',
-        '[class*="dialog"]',
         '[data-slot="alert-dialog-content"]',
-        '[data-slot*="alert-dialog"]',
+        '[data-slot="dialog-content"]',
       ].join(','))].filter(visible);
       return dialogs.at(-1) || document;
     };
