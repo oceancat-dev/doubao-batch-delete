@@ -14,11 +14,13 @@
 
 ## 安装
 
-1. 打开 Chrome 的 `chrome://extensions`，或 Edge 的 `edge://extensions`。
-2. 开启右上角“开发者模式”。
-3. 点击“加载已解压的扩展程序”。
-4. 下载或克隆本仓库，选择解压后的项目目录（目录内应直接包含 `manifest.json`）。
+1. 从 [Releases](https://github.com/youyang13811808-code/doubao-batch-delete/releases) 下载最新的 `doubao-batch-delete-v*.zip` 并解压。
+2. 打开 Chrome 的 `chrome://extensions`，或 Edge 的 `edge://extensions`。
+3. 开启右上角“开发者模式”。
+4. 点击“加载已解压的扩展程序”，选择刚解压的目录（目录内应直接包含 `manifest.json`）。
 5. 登录 [豆包网页版](https://www.doubao.com/chat/) 并刷新页面。
+
+> Chrome / Edge 会限制未经扩展商店签名的扩展直接安装，因此 ZIP 发布包需要先解压，再通过开发者模式加载。
 
 ## 使用
 
