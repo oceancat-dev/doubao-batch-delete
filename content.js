@@ -70,7 +70,7 @@
     const compactText = text.replace(/[\s·・:：|｜]/g, '');
     const systemNavigation = [
       '豆包', '新工作任务', '新对话', '定时任务', '技能连接器伙伴',
-      '云盘', '手机遥控电脑', 'API服务', '更多', '项目', '创建新项目',
+      '云盘', '手机遥控电脑', 'API服务', '更多', '项目', '创建新项目', '主对话',
     ];
     if (!text || systemNavigation.includes(compactText) || /^技能连接器伙伴/.test(compactText)) return false;
     const href = row.querySelector('a[href]')?.getAttribute('href') || row.getAttribute('href') || '';
@@ -381,31 +381,36 @@
     document.getElementById('dbbd-stop').hidden = false;
     let success = 0;
     const failed = [];
+    let consecutiveFailures = 0;
     for (let i = 0; i < chosen.length; i += 1) {
       if (STATE.stopped) break;
       const item = chosen[i];
-      updatePanel(`正在删除 ${i + 1}/${chosen.length}：${titleFor(item.row)}`);
+      updatePanel(`后台删除 ${i + 1}/${chosen.length}：${titleFor(item.row)}（请保持豆包标签页开启）`);
       try {
         await deleteOne(item.row);
         STATE.selected.delete(item.key);
         success += 1;
+        consecutiveFailures = 0;
       } catch (error) {
         const reason = `${titleFor(item.row)}：${error.message}`;
         failed.push(reason);
-        STATE.stopped = true;
+        STATE.selected.delete(item.key);
+        consecutiveFailures += 1;
         closeOpenOverlay();
-        updatePanel(`已停止：${error.message}`);
-        console.error('[豆包批量删除] 第一条失败，任务已停止：', reason, error);
+        if (consecutiveFailures >= 3) {
+          STATE.stopped = true;
+          updatePanel(`连续失败 3 条，已停止：${error.message}`);
+        } else {
+          updatePanel(`已跳过失败项：${error.message}`);
+        }
+        console.error('[豆包批量删除] 删除失败：', reason, error);
       }
       await sleep(450);
     }
     STATE.running = false;
     document.getElementById('dbbd-stop').hidden = true;
     scheduleScan();
-    const firstFailure = failed[0]?.split('：').slice(1).join('：');
-    const summary = firstFailure
-      ? `失败并停止：${firstFailure}`
-      : `完成：成功 ${success} 条，失败 ${failed.length} 条${STATE.stopped ? '（已停止）' : ''}`;
+    const summary = `完成：成功 ${success} 条，跳过 ${failed.length} 条${STATE.stopped ? '（连续失败，已停止）' : ''}`;
     updatePanel(summary);
     toast(summary, failed.length ? 'warn' : 'success');
     if (failed.length) console.warn('[豆包批量删除] 失败记录：\n' + failed.join('\n'));
