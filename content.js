@@ -240,7 +240,25 @@
         return visible(el) && !normalizedText(el) && rect.right > box.left + box.width * 0.55 && rect.width <= 56 && rect.height <= 56;
       })
       .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
-    const target = named || menuPopup || iconOnly || svgControls[0];
+
+    // 部分版本把菜单控件作为会话行的兄弟节点挂在侧栏中。
+    // 按几何位置寻找与当前行垂直重叠、位于右半侧的小型 SVG 控件。
+    const sidebarControls = [...(sidebar()?.querySelectorAll('svg') || [])]
+      .map((svg) => svg.closest('button,[role="button"]') || svg.parentElement)
+      .filter((el, index, all) => {
+        if (!el || all.indexOf(el) !== index || el.closest('.dbbd-check') || el.closest('#dbbd-panel')) return false;
+        const rect = el.getBoundingClientRect();
+        const centerY = rect.top + rect.height / 2;
+        return visible(el)
+          && !normalizedText(el)
+          && centerY >= box.top - 3
+          && centerY <= box.bottom + 3
+          && rect.right > box.left + box.width * 0.65
+          && rect.width <= 56
+          && rect.height <= 56;
+      })
+      .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+    const target = named || menuPopup || iconOnly || svgControls[0] || sidebarControls[0];
     if (!target) throw new Error('找不到该会话的“更多”按钮');
     target.click();
     await sleep(350);
