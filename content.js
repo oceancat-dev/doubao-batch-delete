@@ -15,7 +15,7 @@
 
   const TEXT = {
     delete: /^删除(?:对话|会话|聊天|记录)?$/,
-    confirmDelete: /^(?:确认删除|删除|确定|确认)$/,
+    confirmDelete: /^(?:(?:确认|确定)?删除(?:对话|会话|聊天|记录)?|确定|确认)$/,
     cancel: /^(?:取消|暂不)$/,
   };
 
@@ -345,14 +345,22 @@
     cleanupMenuTrigger();
     await sleep(250);
     const getDialogScope = () => {
-      const dialogs = [...document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="dialog"], [data-slot="alert-dialog-content"]')].filter(visible);
+      const dialogs = [...document.querySelectorAll([
+        '[role="alertdialog"]',
+        '[role="dialog"]',
+        '[class*="modal"]',
+        '[class*="dialog"]',
+        '[data-slot="alert-dialog-content"]',
+        '[data-slot*="alert-dialog"]',
+      ].join(','))].filter(visible);
       return dialogs.at(-1) || document;
     };
     await waitForMatchingVisible(TEXT.confirmDelete, getDialogScope, 3000);
     const scope = getDialogScope();
-    const confirmButtons = [...scope.querySelectorAll('button,[role="button"]')]
+    const directConfirm = scope.querySelector('[data-slot="alert-dialog-action"]');
+    const confirmButtons = [...scope.querySelectorAll('button,[role="button"],[data-slot="alert-dialog-action"]')]
       .filter((el) => visible(el) && TEXT.confirmDelete.test(normalizedText(el)) && !el.closest('#dbbd-panel'));
-    const confirm = confirmButtons.find((el) =>
+    const confirm = (directConfirm && visible(directConfirm) ? directConfirm : null) || confirmButtons.find((el) =>
       /danger|primary|destructive|red/i.test(`${el.className} ${el.getAttribute('data-variant') || ''}`)
     ) || confirmButtons.at(-1);
     if (!confirm) throw new Error('找不到删除确认按钮');

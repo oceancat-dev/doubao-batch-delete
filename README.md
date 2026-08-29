@@ -97,3 +97,8 @@
 
 - 使用 Radix 菜单实际监听的 `pointerdown` 事件打开会话菜单
 - 检查 `aria-expanded` 和 `data-state`，区分按钮识别失败与菜单打开失败
+
+### v1.0.11
+
+- 兼容 Radix `role="alertdialog"` 删除确认弹窗
+- 精确识别 `alert-dialog-action`，并支持“删除对话”等按钮文案
