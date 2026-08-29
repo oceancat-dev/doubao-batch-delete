@@ -14,8 +14,8 @@
   };
 
   const TEXT = {
-    delete: /^删除(?:对话|会话)?$/,
-    confirmDelete: /^(?:确认)?删除$/,
+    delete: /^删除(?:对话|会话|聊天|记录)?$/,
+    confirmDelete: /^(?:确认删除|删除|确定|确认)$/,
     cancel: /^(?:取消|暂不)$/,
   };
 
@@ -177,32 +177,54 @@
 
   async function openRowMenu(row) {
     row.scrollIntoView({ block: 'center' });
-    row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-    await sleep(220);
-    const candidates = [...row.querySelectorAll('button,[role="button"],[aria-label],[title]')].filter(visible);
-    const named = candidates.find((el) => /更多|操作|菜单|more|menu/i.test(`${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''}`));
-    const iconOnly = candidates.filter((el) => !normalizedText(el)).at(-1);
-    const target = named || iconOnly || candidates.at(-1);
+    const box = row.getBoundingClientRect();
+    const eventOptions = { bubbles: true, clientX: box.right - 12, clientY: box.top + box.height / 2 };
+    row.dispatchEvent(new PointerEvent('pointerover', eventOptions));
+    row.dispatchEvent(new MouseEvent('mouseover', eventOptions));
+    row.dispatchEvent(new MouseEvent('mousemove', eventOptions));
+    await sleep(300);
+
+    // 只允许真正的交互控件成为菜单按钮。旧版本包含通用 [title]，
+    // 会误选扩展自己插入的复选框。
+    const candidates = [...row.querySelectorAll(
+      'button,[role="button"],[aria-haspopup="menu"],[data-testid*="more" i],[data-testid*="menu" i]'
+    )].filter((el) => visible(el) && !el.closest('.dbbd-check') && !el.closest('#dbbd-panel'));
+    const named = candidates.find((el) => /更多|操作|菜单|more|menu|ellipsis/i.test(
+      `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.getAttribute('data-testid') || ''}`
+    ));
+    const menuPopup = candidates.find((el) => el.getAttribute('aria-haspopup') === 'menu');
+    const iconOnly = candidates
+      .filter((el) => !normalizedText(el))
+      .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right)[0];
+    const target = named || menuPopup || iconOnly;
     if (!target) throw new Error('找不到该会话的“更多”按钮');
-    clickable(target).click();
-    await sleep(260);
+    target.click();
+    await sleep(350);
+  }
+
+  function closeOpenOverlay() {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', code: 'Escape', bubbles: true }));
   }
 
   async function deleteOne(row) {
     await openRowMenu(row);
-    const deleteItem = matchingVisible(TEXT.delete).find((el) => !el.closest('#dbbd-panel'));
+    const deleteItem = matchingVisible(TEXT.delete).find((el) =>
+      !el.closest('#dbbd-panel') && !el.closest('.dbbd-row')
+    );
     if (!deleteItem) {
-      document.body.click();
+      closeOpenOverlay();
       throw new Error('菜单中找不到“删除”');
     }
     clickable(deleteItem).click();
     await sleep(300);
     const dialogs = [...document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="dialog"]')].filter(visible);
     const scope = dialogs.at(-1) || document;
-    const confirm = matchingVisible(TEXT.confirmDelete, scope)
-      .map(clickable)
-      .find((el) => visible(el) && !el.closest('#dbbd-panel'));
+    const confirmButtons = [...scope.querySelectorAll('button,[role="button"]')]
+      .filter((el) => visible(el) && TEXT.confirmDelete.test(normalizedText(el)) && !el.closest('#dbbd-panel'));
+    const confirm = confirmButtons.find((el) =>
+      /danger|primary|destructive|red/i.test(`${el.className} ${el.getAttribute('data-variant') || ''}`)
+    ) || confirmButtons.at(-1);
     if (!confirm) throw new Error('找不到删除确认按钮');
     confirm.click();
     await sleep(700);
@@ -232,7 +254,12 @@
         STATE.selected.delete(item.key);
         success += 1;
       } catch (error) {
-        failed.push(`${titleFor(item.row)}：${error.message}`);
+        const reason = `${titleFor(item.row)}：${error.message}`;
+        failed.push(reason);
+        STATE.stopped = true;
+        closeOpenOverlay();
+        updatePanel(`已停止：${error.message}`);
+        console.error('[豆包批量删除] 第一条失败，任务已停止：', reason, error);
       }
       await sleep(450);
     }
