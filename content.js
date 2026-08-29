@@ -198,7 +198,9 @@
     row.scrollIntoView({ block: 'center' });
     const box = row.getBoundingClientRect();
     const eventOptions = { bubbles: true, clientX: box.right - 12, clientY: box.top + box.height / 2 };
+    row.dispatchEvent(new PointerEvent('pointerenter', { ...eventOptions, bubbles: false }));
     row.dispatchEvent(new PointerEvent('pointerover', eventOptions));
+    row.dispatchEvent(new MouseEvent('mouseenter', { ...eventOptions, bubbles: false }));
     row.dispatchEvent(new MouseEvent('mouseover', eventOptions));
     row.dispatchEvent(new MouseEvent('mousemove', eventOptions));
     await sleep(300);
@@ -227,7 +229,18 @@
     const iconOnly = candidates
       .filter((el) => !normalizedText(el) && (el.matches('button,[role="button"]') || el.querySelector('svg')))
       .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right)[0];
-    const target = named || menuPopup || iconOnly;
+
+    // 豆包当前版本的侧栏“更多”是无 aria/title 的 SVG 包装元素。
+    // 从会话行右半侧选择尺寸较小、无文字的最右 SVG 控件作为兜底。
+    const svgControls = [...row.querySelectorAll('svg')]
+      .map((svg) => svg.closest('button,[role="button"]') || svg.parentElement)
+      .filter((el, index, all) => {
+        if (!el || all.indexOf(el) !== index || el.closest('.dbbd-check')) return false;
+        const rect = el.getBoundingClientRect();
+        return visible(el) && !normalizedText(el) && rect.right > box.left + box.width * 0.55 && rect.width <= 56 && rect.height <= 56;
+      })
+      .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right);
+    const target = named || menuPopup || iconOnly || svgControls[0];
     if (!target) throw new Error('找不到该会话的“更多”按钮');
     target.click();
     await sleep(350);
