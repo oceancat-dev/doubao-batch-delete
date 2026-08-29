@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "豆包聊天记录批量删除",
+  "version": "1.0.0",
+  "description": "在豆包网页版中批量选择并删除聊天记录。",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.doubao.com/*", "https://doubao.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.doubao.com/*", "https://doubao.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "豆包批量删除"
+  }
+}
