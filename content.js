@@ -67,7 +67,12 @@
   function looksLikeConversation(row) {
     if (!visible(row) || row.closest('#dbbd-panel')) return false;
     const text = titleFor(row);
-    if (!text || /^(豆包|新工作任务|新对话|API 服务|更多|定时任务|技能|云盘|手机遥控电脑)$/.test(text)) return false;
+    const compactText = text.replace(/[\s·・:：|｜]/g, '');
+    const systemNavigation = [
+      '豆包', '新工作任务', '新对话', '定时任务', '技能连接器伙伴',
+      '云盘', '手机遥控电脑', 'API服务', '更多', '项目', '创建新项目',
+    ];
+    if (!text || systemNavigation.includes(compactText) || /^技能连接器伙伴/.test(compactText)) return false;
     const href = row.querySelector('a[href]')?.getAttribute('href') || row.getAttribute('href') || '';
     if (/\/chat\/[^/?#]+/.test(href)) return true;
     return row.matches('.group\/sidebar_chat_item,[class*="conversation"],[class*="chat-item"],[class*="history-item"]');
@@ -115,8 +120,22 @@
 
   function scan() {
     if (STATE.running) return;
+    const root = sidebar();
+    const foundRows = findRows();
+    const validRows = new Set(foundRows);
+
+    // 页面改版或旧版误判后，主动清除非会话项目上的复选框。
+    root?.querySelectorAll('.dbbd-row').forEach((row) => {
+      if (validRows.has(row)) return;
+      const key = row.dataset.dbbdKey;
+      if (key) STATE.selected.delete(key);
+      row.querySelector(':scope > .dbbd-check')?.remove();
+      row.classList.remove('dbbd-row', 'dbbd-selected');
+      delete row.dataset.dbbdKey;
+    });
+
     STATE.rows.clear();
-    findRows().forEach((row, index) => {
+    foundRows.forEach((row, index) => {
       const key = stableKey(row, index);
       STATE.rows.set(key, row);
       injectCheckbox(row, key);
