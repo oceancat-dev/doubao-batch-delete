@@ -186,15 +186,27 @@
 
     // 只允许真正的交互控件成为菜单按钮。旧版本包含通用 [title]，
     // 会误选扩展自己插入的复选框。
-    const candidates = [...row.querySelectorAll(
-      'button,[role="button"],[aria-haspopup="menu"],[data-testid*="more" i],[data-testid*="menu" i]'
-    )].filter((el) => visible(el) && !el.closest('.dbbd-check') && !el.closest('#dbbd-panel'));
+    const candidates = [...row.querySelectorAll([
+      'button',
+      '[role="button"]',
+      '[aria-haspopup="menu"]',
+      '[aria-label]',
+      '[title]',
+      '[data-testid*="more" i]',
+      '[data-testid*="menu" i]',
+      '[class*="more" i]',
+      '[class*="menu" i]',
+      '[class*="operation" i]',
+      '[class*="action" i]',
+    ].join(','))].filter((el) =>
+      visible(el) && !el.closest('.dbbd-check') && !el.closest('#dbbd-panel') && el !== row
+    );
     const named = candidates.find((el) => /更多|操作|菜单|more|menu|ellipsis/i.test(
       `${el.getAttribute('aria-label') || ''} ${el.getAttribute('title') || ''} ${el.getAttribute('data-testid') || ''}`
     ));
     const menuPopup = candidates.find((el) => el.getAttribute('aria-haspopup') === 'menu');
     const iconOnly = candidates
-      .filter((el) => !normalizedText(el))
+      .filter((el) => !normalizedText(el) && (el.matches('button,[role="button"]') || el.querySelector('svg')))
       .sort((a, b) => b.getBoundingClientRect().right - a.getBoundingClientRect().right)[0];
     const target = named || menuPopup || iconOnly;
     if (!target) throw new Error('找不到该会话的“更多”按钮');
@@ -266,7 +278,10 @@
     STATE.running = false;
     document.getElementById('dbbd-stop').hidden = true;
     scheduleScan();
-    const summary = `完成：成功 ${success} 条，失败 ${failed.length} 条${STATE.stopped ? '（已停止）' : ''}`;
+    const firstFailure = failed[0]?.split('：').slice(1).join('：');
+    const summary = firstFailure
+      ? `失败并停止：${firstFailure}`
+      : `完成：成功 ${success} 条，失败 ${failed.length} 条${STATE.stopped ? '（已停止）' : ''}`;
     updatePanel(summary);
     toast(summary, failed.length ? 'warn' : 'success');
     if (failed.length) console.warn('[豆包批量删除] 失败记录：\n' + failed.join('\n'));
