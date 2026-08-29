@@ -66,6 +66,9 @@
 
   function looksLikeConversation(row) {
     if (!visible(row) || row.closest('#dbbd-panel')) return false;
+    // 历史记录可能也叫“新对话”。真实会话行包含独立的下拉菜单触发器，
+    // 应优先判定为可删除记录；顶部系统入口没有该按钮。
+    if (row.querySelector('button[aria-haspopup="menu"][data-slot="dropdown-menu-trigger"]')) return true;
     const text = titleFor(row);
     const compactText = text.replace(/[\s·・:：|｜]/g, '');
     const systemNavigation = [
