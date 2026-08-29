@@ -194,14 +194,36 @@
       .sort((a, b) => a.children.length - b.children.length || a.getBoundingClientRect().width - b.getBoundingClientRect().width);
   }
 
+  function waitForCondition(check, timeoutMs = 2500) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        observer.disconnect();
+        clearTimeout(timer);
+        resolve(value);
+      };
+      const inspect = () => {
+        try {
+          const value = check();
+          if (value) finish(value);
+        } catch (error) {
+          finish(null);
+        }
+      };
+      const observer = new MutationObserver(inspect);
+      const timer = setTimeout(() => finish(null), timeoutMs);
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+      inspect();
+    });
+  }
+
   async function waitForMatchingVisible(regex, scopeProvider = () => document, timeoutMs = 2500) {
-    const deadline = Date.now() + timeoutMs;
-    do {
+    return await waitForCondition(() => {
       const matches = matchingVisible(regex, scopeProvider());
-      if (matches.length) return matches;
-      await sleep(100);
-    } while (Date.now() < deadline);
-    return [];
+      return matches.length ? matches : null;
+    }, timeoutMs) || [];
   }
 
   async function openRowMenu(row) {
@@ -237,7 +259,7 @@
     row.dispatchEvent(new MouseEvent('mouseenter', { ...eventOptions, bubbles: false }));
     row.dispatchEvent(new MouseEvent('mouseover', eventOptions));
     row.dispatchEvent(new MouseEvent('mousemove', eventOptions));
-    await sleep(350);
+    await sleep(40);
 
     // 只允许真正的交互控件成为菜单按钮。旧版本包含通用 [title]，
     // 会误选扩展自己插入的复选框。
@@ -313,11 +335,11 @@
     };
     target.dispatchEvent(new PointerEvent('pointerdown', pointerOptions));
     target.dispatchEvent(new MouseEvent('mousedown', { ...pointerOptions, detail: 1 }));
-    await sleep(80);
     target.dispatchEvent(new PointerEvent('pointerup', { ...pointerOptions, buttons: 0 }));
     target.dispatchEvent(new MouseEvent('mouseup', { ...pointerOptions, buttons: 0, detail: 1 }));
-    await sleep(350);
-    const menuOpened = target.getAttribute('aria-expanded') === 'true' || target.getAttribute('data-state') === 'open';
+    const menuOpened = await waitForCondition(() =>
+      target.getAttribute('aria-expanded') === 'true' || target.getAttribute('data-state') === 'open',
+    1500);
     if (target.hasAttribute('aria-haspopup') && !menuOpened) {
       cleanup();
       throw new Error('已找到“更多”按钮，但菜单未打开');
@@ -343,7 +365,6 @@
     }
     clickable(deleteItem).click();
     cleanupMenuTrigger();
-    await sleep(250);
     const getDialogScope = () => {
       const dialogs = [...document.querySelectorAll([
         '[role="alertdialog"]',
@@ -363,7 +384,7 @@
     ) || confirmButtons.at(-1);
     if (!confirm) throw new Error('找不到删除确认按钮');
     confirm.click();
-    await sleep(700);
+    await waitForCondition(() => !row.isConnected || !visible(confirm), 2000);
   }
 
   async function runDelete() {
@@ -405,7 +426,7 @@
         }
         console.error('[豆包批量删除] 删除失败：', reason, error);
       }
-      await sleep(450);
+      await sleep(80);
     }
     STATE.running = false;
     document.getElementById('dbbd-stop').hidden = true;
